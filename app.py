@@ -32,3 +32,6 @@ if st.button("Analyze"):
             st.error("Negative review 😡")
 
         st.metric("Prediction Score", f"{score:.4f}")
+
+st.markdown("---")
+st.caption("Sentiment analysis model developed by Md. Nazmul Hasan Khan Mahmud")
