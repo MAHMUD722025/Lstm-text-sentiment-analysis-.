@@ -1,3 +1,4 @@
+import re
 import streamlit as st
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.sequence import pad_sequences
@@ -6,6 +7,9 @@ from tensorflow.keras.datasets import imdb
 st.set_page_config(page_title="LSTM Sentiment Analysis", page_icon="🎬")
 st.title("🎬 Movie Review Sentiment Analysis")
 st.write("Bidirectional LSTM sentiment classifier")
+
+MAX_WORDS = 10000
+MAX_LEN = 100
 
 @st.cache_resource
 def load_assets():
@@ -21,9 +25,19 @@ if st.button("Analyze"):
     if not review.strip():
         st.warning("Please enter a review.")
     else:
-        words = review.lower().split()
-        seq = [[word_index.get(w, 2) + 3 for w in words]]
-        padded_seq = pad_sequences(seq, maxlen=100)
+        # Match Keras IMDB's original indexing scheme:
+        # 0 = padding, 1 = start, 2 = OOV, actual words start at 3.
+        words = re.findall(r"[a-zA-Z]+(?:'[a-zA-Z]+)?", review.lower())
+        sequence = []
+
+        for word in words:
+            index = word_index.get(word)
+            if index is None or index + 3 >= MAX_WORDS:
+                sequence.append(2)  # OOV
+            else:
+                sequence.append(index + 3)
+
+        padded_seq = pad_sequences([sequence], maxlen=MAX_LEN)
         score = float(model.predict(padded_seq, verbose=0)[0][0])
 
         if score >= 0.5:
