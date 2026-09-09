@@ -19,25 +19,29 @@ def load_assets():
 
 model, word_index = load_assets()
 
+
+def preprocess_review(text):
+    words = re.findall(r"[a-zA-Z]+(?:'[a-zA-Z]+)?", text.lower())
+    sequence = [1]  # Keras IMDB START token
+
+    for word in words:
+        index = word_index.get(word)
+        if index is None:
+            sequence.append(2)  # OOV
+        else:
+            keras_index = index + 3
+            sequence.append(keras_index if keras_index < MAX_WORDS else 2)
+
+    return pad_sequences([sequence], maxlen=MAX_LEN)
+
+
 review = st.text_area("Enter a movie review:", height=180)
 
 if st.button("Analyze"):
     if not review.strip():
         st.warning("Please enter a review.")
     else:
-        # Match Keras IMDB's original indexing scheme:
-        # 0 = padding, 1 = start, 2 = OOV, actual words start at 3.
-        words = re.findall(r"[a-zA-Z]+(?:'[a-zA-Z]+)?", review.lower())
-        sequence = []
-
-        for word in words:
-            index = word_index.get(word)
-            if index is None or index + 3 >= MAX_WORDS:
-                sequence.append(2)  # OOV
-            else:
-                sequence.append(index + 3)
-
-        padded_seq = pad_sequences([sequence], maxlen=MAX_LEN)
+        padded_seq = preprocess_review(review)
         score = float(model.predict(padded_seq, verbose=0)[0][0])
 
         if score >= 0.5:
